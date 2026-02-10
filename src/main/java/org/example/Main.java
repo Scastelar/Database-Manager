@@ -14,13 +14,13 @@ public class Main extends Application {
     public void start(Stage stage) {
         stage.setTitle("DB Tool Manager");
 
-        Scene loginScene = crearLoginScene(stage);
+        Scene loginScene = createLoginScene(stage);
         stage.setScene(loginScene);
         stage.show();
     }
 
-    // PESTANA DEL LOGIN
-    private Scene crearLoginScene(Stage stage) {
+    // ESCENA DEL LOGIN
+    private Scene createLoginScene(Stage stage) {
 
         Label title = new Label("Iniciar Sesion");
 
@@ -47,21 +47,21 @@ public class Main extends Application {
                 var rs = ps.executeQuery();
 
                 if (rs.next()) {
-                    message.setText("Login correcto!");
+                    message.setText("Login exitoso!");
                 } else {
-                    message.setText("Credenciales incorrectas ");
+                    message.setText("Credenciales incorrectas");
                 }
 
                 conn.close();
 
             } catch (Exception ex) {
                 ex.printStackTrace();
-                message.setText("Error de conexión");
+                message.setText("Error de conexion");
             }
         });
 
         goRegisterBtn.setOnAction(e ->
-                stage.setScene(crearRegistroScene(stage))
+                stage.setScene(createRegisterScene(stage))
         );
 
         VBox root = new VBox(10,
@@ -73,8 +73,8 @@ public class Main extends Application {
         return new Scene(root, 300, 300);
     }
 
-    // PESTANA DEL REGISTRO
-    private Scene crearRegistroScene(Stage stage) {
+    // ESCENA DEL REGISTRO
+    private Scene createRegisterScene(Stage stage) {
 
         Label title = new Label("Crear Cuenta");
 
@@ -106,12 +106,12 @@ public class Main extends Application {
                 message.setText("Cuenta creada exitosamente");
 
             } catch (Exception ex) {
-                message.setText("Usuario ya existe :( ");
+                message.setText("Usuario ya existe :(");
             }
         });
 
         backLoginBtn.setOnAction(e ->
-                stage.setScene(crearLoginScene(stage))
+                stage.setScene(createLoginScene(stage))
         );
 
         VBox root = new VBox(10,
