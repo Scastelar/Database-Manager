@@ -53,7 +53,8 @@ public class LoginFrame extends JFrame {
                 ResultSet rs = ps.executeQuery();
 
                 if (rs.next()) {
-                    message.setText("Login correcto");
+                    new DashboardFrame(userField.getText());
+                        dispose();
                 } else {
                     message.setText("Credenciales incorrectas");
                 }

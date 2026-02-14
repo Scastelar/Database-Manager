@@ -1,4 +1,5 @@
 Modelos\Conexion.class
+ui\DashboardFrame.class
 ui\LoginFrame.class
 Modelos\Usuario.class
 util\Main.class
