@@ -1,6 +1,7 @@
 Modelos\Conexion.class
-util\Session.class
 ui\LoginFrame.class
-util\DBConnection.class
 Modelos\Usuario.class
 util\Main.class
+ui\RegisterFrame.class
+util\Session.class
+util\DBConnection.class
