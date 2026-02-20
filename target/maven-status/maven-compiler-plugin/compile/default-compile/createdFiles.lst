@@ -3,6 +3,8 @@ ui\DashboardFrame.class
 ui\LoginFrame.class
 Modelos\Usuario.class
 util\Main.class
+util\DBManager.class
+dao\ConexionDAO.class
 ui\RegisterFrame.class
 util\Session.class
 util\DBConnection.class

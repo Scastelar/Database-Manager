@@ -1,5 +1,6 @@
 package ui;
 
+import Modelos.Usuario;
 import static util.DBConnection.getConnection;
 import javax.swing.*;
 import java.awt.*;
@@ -7,6 +8,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import javax.swing.border.EmptyBorder;
+import util.Session;
 
 public class LoginFrame extends JFrame {
 
@@ -53,6 +55,7 @@ public class LoginFrame extends JFrame {
                 ResultSet rs = ps.executeQuery();
 
                 if (rs.next()) {
+                    Session.usuarioActual = new Usuario(rs.getInt("id"), rs.getString("username"));
                     new DashboardFrame(userField.getText());
                         dispose();
                 } else {
