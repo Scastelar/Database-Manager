@@ -1,7 +1,6 @@
 package dao;
 
 import Modelos.Conexion;
-import java.awt.List;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -42,8 +41,8 @@ public class ConexionDAO {
 
     public boolean guardarConexion(Conexion conexion) {
         String sql = "INSERT INTO conexiones (usuario_id, nombre, tipo"
-                + ", host, puerto, database_name, username, password) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?)";
+                + ", host, puerto, db_name, db_user, db_password) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?,?)";
 
         try (Connection conn = DBConnection.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
 
@@ -93,7 +92,7 @@ public class ConexionDAO {
 
     public boolean actualizarConexion(Conexion conexion) {
         String sql = "update conexiones set nombre=?, tipo=?, host=?, puerto=?, "
-                + "db_name=?, db_user=?, db_password=? where id=? and usuario=id?";
+                + "db_name=?, db_user=?, db_password=? where id=? and usuario_id=?";
 
         try (Connection conn = DBConnection.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
 

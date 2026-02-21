@@ -1,9 +1,13 @@
 package ui;
 
+import Modelos.Conexion;
+import dao.ConexionDAO;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
+import util.DBManager;
+import util.Session;
 
 public class DashboardFrame extends JFrame {
 
@@ -107,12 +111,15 @@ public class DashboardFrame extends JFrame {
         JPanel centerPanel = new JPanel(new BorderLayout(5, 5));
         
         // Modelo de lista para las conexiones
-        DefaultListModel<String> connectionListModel = new DefaultListModel<>();
-        connectionListModel.addElement("MySQL - localhost:3306");
-        connectionListModel.addElement("PostgreSQL - localhost:5432");
-        connectionListModel.addElement("Oracle - 192.168.1.100:1521");
-        
-        JList<String> connectionList = new JList<>(connectionListModel);
+        DefaultListModel<Conexion> connectionListModel = new DefaultListModel<>();
+        ConexionDAO dao = new ConexionDAO();
+    
+        // Cargar conexiones desde la base de datos
+        for (Conexion c : dao.obtenerConexionesUsuario()) {
+            connectionListModel.addElement(c);
+        }
+    
+       JList<Conexion> connectionList = new JList<>(connectionListModel);
         connectionList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         connectionList.setFont(new Font("Arial", Font.PLAIN, 14));
         connectionList.setBorder(BorderFactory.createLineBorder(Color.GRAY));
@@ -161,8 +168,93 @@ public class DashboardFrame extends JFrame {
         infoPanel.add(new JScrollPane(infoArea), BorderLayout.CENTER);
         
         panel.add(infoPanel, BorderLayout.SOUTH);
-        return panel;
-    }
+        // LISTENERS
+    newConnectionBtn.addActionListener(e -> {
+        ConnectionDialog dialog = new ConnectionDialog(this, null);
+        dialog.setVisible(true);
+        if (dialog.isGuardado()) {
+            // Recargar lista
+            connectionListModel.clear();
+            for (Conexion c : dao.obtenerConexionesUsuario()) {
+                connectionListModel.addElement(c);
+            }
+        }
+    });
+
+    editConnectionBtn.addActionListener(e -> {
+        Conexion selected = connectionList.getSelectedValue();
+        if (selected != null) {
+            ConnectionDialog dialog = new ConnectionDialog(this, selected);
+            dialog.setVisible(true);
+            if (dialog.isGuardado()) {
+                // Recargar lista
+                connectionListModel.clear();
+                for (Conexion c : dao.obtenerConexionesUsuario()) {
+                    connectionListModel.addElement(c);
+                }
+            }
+        } else {
+            JOptionPane.showMessageDialog(this, "Selecciona una conexión primero");
+        }
+    });
+
+    deleteConnectionBtn.addActionListener(e -> {
+        Conexion selected = connectionList.getSelectedValue();
+        if (selected != null) {
+            int confirm = JOptionPane.showConfirmDialog(this, 
+                "¿Eliminar la conexión '" + selected.getNombre() + "'?", 
+                "Confirmar", 
+                JOptionPane.YES_NO_OPTION);
+            if (confirm == JOptionPane.YES_OPTION) {
+                if (dao.eliminarConexion(selected.getId())) {
+                    connectionListModel.removeElement(selected);
+                    JOptionPane.showMessageDialog(this, "Conexión eliminada");
+                } else {
+                    JOptionPane.showMessageDialog(this, "Error al eliminar");
+                }
+            }
+        } else {
+            JOptionPane.showMessageDialog(this, "Selecciona una conexión primero");
+        }
+    });
+
+    testConnectionBtn.addActionListener(e -> {
+        Conexion selected = connectionList.getSelectedValue();
+        if (selected != null) {
+            if (DBManager.probarConexion(selected)) {
+                JOptionPane.showMessageDialog(this, "✓ Conexión exitosa");
+            } else {
+                JOptionPane.showMessageDialog(this, "✗ Error de conexión", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } else {
+            JOptionPane.showMessageDialog(this, "Selecciona una conexión primero");
+        }
+    });
+
+    connectBtn.addActionListener(e -> {
+        Conexion selected = connectionList.getSelectedValue();
+        if (selected != null) {
+            Session.conexionActiva = selected;
+            JOptionPane.showMessageDialog(this, "Conectado a: " + selected.getNombre());
+        } else {
+            JOptionPane.showMessageDialog(this, "Selecciona una conexión primero");
+        }
+    });
+
+
+    connectionList.addListSelectionListener(e -> {
+        if (!e.getValueIsAdjusting() && connectionList.getSelectedValue() != null) {
+            Conexion c = connectionList.getSelectedValue();
+            infoArea.setText("Nombre: " + c.getNombre() + 
+                "\nTipo: " + c.getTipo() +
+                "\nHost: " + c.getHost() + ":" + c.getPuerto() +
+                "\nBase de datos: " + (c.getDatabase().isEmpty() ? "(ninguna)" : c.getDatabase()) +
+                "\nUsuario: " + c.getUsuario());
+        }
+    });
+
+    return panel;
+}
 
 
     private JPanel createSqlPanel() {

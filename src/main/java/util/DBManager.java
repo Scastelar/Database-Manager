@@ -56,7 +56,7 @@ public class DBManager {
      
      try (Connection conn = conectar(tempConexion);
              Statement st = conn.createStatement()){
-         String sql = "create database" + nombreDB;
+         String sql = "create database " + nombreDB;
          st.executeUpdate(sql);
          return true;
      }catch (SQLException e){
