@@ -82,22 +82,13 @@ public class Conexion {
     }
     
     //obtener la URL JDBC
-    public String getJDBC(){
-        
-        String dbPart = (database != null && !database.isEmpty()) ? "/" + database : "";
-        switch(tipo.toLowerCase()){
-            case "mariadb":
-                return "jdbc:mariadb://" + host + ":" + puerto + dbPart + 
-                        "?useSsl=false" + "&allowPublicKeyRetrieval=true" +
-                        "&useLocalSessionState=true" + "&rewriteBatchedStatements=true";
-            case "mysql":
-                return "jdbc:mysql://" + host + ":" + puerto + dbPart + 
-                        "?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC";
-            case "postgresql":
-                return "jdbc:" + tipo + "://" + host + ":" + puerto + "/" 
-                        + (database != null && !database.isEmpty() ? database: "");
-            default:
-                return "";
-        }
-    }
+   public String getJDBC(){
+    String dbPart = (database != null && !database.isEmpty()) ? "/" + database : "";
+    
+    return "jdbc:mariadb://" + host + ":" + puerto + dbPart + 
+            "?useSSL=false" + 
+            "&allowPublicKeyRetrieval=true" +
+            "&useLocalSessionState=true" + 
+            "&rewriteBatchedStatements=true";
+}
 }

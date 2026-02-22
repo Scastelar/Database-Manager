@@ -6,6 +6,7 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
+import javax.swing.table.DefaultTableModel;
 import util.DBManager;
 import util.Session;
 
@@ -26,7 +27,7 @@ public class DashboardFrame extends JFrame {
         // toolbar 
         JPanel sidebar = new JPanel();
         sidebar.setPreferredSize(new Dimension(80, getHeight()));
-        sidebar.setLayout(new GridLayout(4,1,10,10));
+        sidebar.setLayout(new GridLayout(4, 1, 10, 10));
         sidebar.setBackground(new Color(193, 219, 232));
 
         JButton connectionsBtn = createIconButton("src\\main\\java\\icons\\gestion-de-bases-de-datos.png", "Gestor de Conexiones");
@@ -44,7 +45,6 @@ public class DashboardFrame extends JFrame {
         // panel del centro
         cardLayout = new CardLayout();
         contentPanel = new JPanel(cardLayout);
-        
 
         JPanel homePanel = createHomePanel(username);
         JPanel connectionsPanel = createConnectionsPanel();
@@ -92,11 +92,10 @@ public class DashboardFrame extends JFrame {
         JPanel panel = new JPanel(new BorderLayout());
         JLabel welcome = new JLabel("Bienvenido, " + username, SwingConstants.CENTER);
         welcome.setFont(new Font("Arial", Font.BOLD, 24));
-        
+
         panel.add(welcome, BorderLayout.CENTER);
         return panel;
     }
-
 
     private JPanel createConnectionsPanel() {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
@@ -109,24 +108,24 @@ public class DashboardFrame extends JFrame {
 
         // Panel central con la lista de conexiones
         JPanel centerPanel = new JPanel(new BorderLayout(5, 5));
-        
+
         // Modelo de lista para las conexiones
         DefaultListModel<Conexion> connectionListModel = new DefaultListModel<>();
         ConexionDAO dao = new ConexionDAO();
-    
+
         // Cargar conexiones desde la base de datos
         for (Conexion c : dao.obtenerConexionesUsuario()) {
             connectionListModel.addElement(c);
         }
-    
-       JList<Conexion> connectionList = new JList<>(connectionListModel);
+
+        JList<Conexion> connectionList = new JList<>(connectionListModel);
         connectionList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         connectionList.setFont(new Font("Arial", Font.PLAIN, 14));
         connectionList.setBorder(BorderFactory.createLineBorder(Color.GRAY));
-        
+
         JScrollPane scrollPane = new JScrollPane(connectionList);
         scrollPane.setBorder(new TitledBorder("Conexiones Disponibles"));
-        
+
         centerPanel.add(scrollPane, BorderLayout.CENTER);
 
         // Panel de botones a la derecha
@@ -160,31 +159,17 @@ public class DashboardFrame extends JFrame {
         JPanel infoPanel = new JPanel(new BorderLayout());
         infoPanel.setBorder(new TitledBorder("Detalles de Conexión"));
         infoPanel.setPreferredSize(new Dimension(0, 100));
-        
+
         JTextArea infoArea = new JTextArea();
         infoArea.setEditable(false);
         infoArea.setText("Selecciona una conexión para ver los detalles");
         infoArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
         infoPanel.add(new JScrollPane(infoArea), BorderLayout.CENTER);
-        
+
         panel.add(infoPanel, BorderLayout.SOUTH);
         // LISTENERS
-    newConnectionBtn.addActionListener(e -> {
-        ConnectionDialog dialog = new ConnectionDialog(this, null);
-        dialog.setVisible(true);
-        if (dialog.isGuardado()) {
-            // Recargar lista
-            connectionListModel.clear();
-            for (Conexion c : dao.obtenerConexionesUsuario()) {
-                connectionListModel.addElement(c);
-            }
-        }
-    });
-
-    editConnectionBtn.addActionListener(e -> {
-        Conexion selected = connectionList.getSelectedValue();
-        if (selected != null) {
-            ConnectionDialog dialog = new ConnectionDialog(this, selected);
+        newConnectionBtn.addActionListener(e -> {
+            ConnectionDialog dialog = new ConnectionDialog(this, null);
             dialog.setVisible(true);
             if (dialog.isGuardado()) {
                 // Recargar lista
@@ -193,156 +178,437 @@ public class DashboardFrame extends JFrame {
                     connectionListModel.addElement(c);
                 }
             }
-        } else {
-            JOptionPane.showMessageDialog(this, "Selecciona una conexión primero");
+        });
+
+        editConnectionBtn.addActionListener(e -> {
+            Conexion selected = connectionList.getSelectedValue();
+            if (selected != null) {
+                ConnectionDialog dialog = new ConnectionDialog(this, selected);
+                dialog.setVisible(true);
+                if (dialog.isGuardado()) {
+                    // Recargar lista
+                    connectionListModel.clear();
+                    for (Conexion c : dao.obtenerConexionesUsuario()) {
+                        connectionListModel.addElement(c);
+                    }
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Selecciona una conexión primero");
+            }
+        });
+
+        deleteConnectionBtn.addActionListener(e -> {
+            Conexion selected = connectionList.getSelectedValue();
+            if (selected != null) {
+                int confirm = JOptionPane.showConfirmDialog(this,
+                        "¿Eliminar la conexión '" + selected.getNombre() + "'?",
+                        "Confirmar",
+                        JOptionPane.YES_NO_OPTION);
+                if (confirm == JOptionPane.YES_OPTION) {
+                    if (dao.eliminarConexion(selected.getId())) {
+                        connectionListModel.removeElement(selected);
+                        JOptionPane.showMessageDialog(this, "Conexión eliminada");
+                    } else {
+                        JOptionPane.showMessageDialog(this, "Error al eliminar");
+                    }
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Selecciona una conexión primero");
+            }
+        });
+
+        testConnectionBtn.addActionListener(e -> {
+            Conexion selected = connectionList.getSelectedValue();
+            if (selected != null) {
+                if (DBManager.probarConexion(selected)) {
+                    JOptionPane.showMessageDialog(this, "Conexión exitosa");
+                } else {
+                    JOptionPane.showMessageDialog(this, "Error de conexión", "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            } else {
+                JOptionPane.showMessageDialog(this, "Selecciona una conexión primero");
+            }
+        });
+
+        connectBtn.addActionListener(e -> {
+            Conexion selected = connectionList.getSelectedValue();
+            if (selected != null) {
+                Session.conexionActiva = selected;
+                JOptionPane.showMessageDialog(this, "Conectado a: " + selected.getNombre());
+            } else {
+                JOptionPane.showMessageDialog(this, "Selecciona una conexión primero");
+            }
+        });
+
+        connectionList.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting() && connectionList.getSelectedValue() != null) {
+                Conexion c = connectionList.getSelectedValue();
+                infoArea.setText("Nombre: " + c.getNombre()
+                        + "\nTipo: " + c.getTipo()
+                        + "\nHost: " + c.getHost() + ":" + c.getPuerto()
+                        + "\nBase de datos: " + (c.getDatabase().isEmpty() ? "(ninguna)" : c.getDatabase())
+                        + "\nUsuario: " + c.getUsuario());
+            }
+        });
+
+        return panel;
+    }
+
+    private JPanel createSqlPanel() {
+    JPanel panel = new JPanel(new BorderLayout(10, 10));
+    panel.setBorder(new EmptyBorder(15, 15, 15, 15));
+
+    // Panel superior con título, info de conexión y selector de BD
+    JPanel topPanel = new JPanel(new BorderLayout(5, 5));
+    
+    JLabel titleLabel = new JLabel("Editor SQL", SwingConstants.CENTER);
+    titleLabel.setFont(new Font("Arial", Font.BOLD, 20));
+    
+    // Panel con info de conexión y selector de BD
+    JPanel connectionPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
+    
+    JLabel connectionInfoLabel = new JLabel("Sin conexión", SwingConstants.CENTER);
+    connectionInfoLabel.setFont(new Font("Arial", Font.ITALIC, 12));
+    connectionInfoLabel.setForeground(Color.RED);
+    
+    JLabel dbLabel = new JLabel("Base de datos:");
+    JComboBox<String> databaseComboBox = new JComboBox<>();
+    databaseComboBox.setPreferredSize(new Dimension(200, 25));
+    databaseComboBox.setEnabled(false);
+    
+    JButton refreshDBBtn = new JButton("refrescar");
+    refreshDBBtn.setPreferredSize(new Dimension(40, 25));
+    refreshDBBtn.setEnabled(false);
+    styleButton(refreshDBBtn, new Color(33, 150, 243));
+    
+    connectionPanel.add(connectionInfoLabel);
+    connectionPanel.add(new JSeparator(SwingConstants.VERTICAL));
+    connectionPanel.add(dbLabel);
+    connectionPanel.add(databaseComboBox);
+    connectionPanel.add(refreshDBBtn);
+    
+    topPanel.add(titleLabel, BorderLayout.NORTH);
+    topPanel.add(connectionPanel, BorderLayout.CENTER);
+    
+    panel.add(topPanel, BorderLayout.NORTH);
+
+    // Panel principal con división horizontal: explorador | editor
+    JSplitPane mainSplitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+    mainSplitPane.setDividerLocation(200);
+    mainSplitPane.setResizeWeight(0.2);
+
+    // PANEL IZQUIERDO: Explorador de tablas
+    JPanel explorerPanel = new JPanel(new BorderLayout(5, 5));
+    explorerPanel.setBorder(new TitledBorder("Tablas"));
+    
+    DefaultListModel<String> tablasListModel = new DefaultListModel<>();
+    JList<String> tablasList = new JList<>(tablasListModel);
+    tablasList.setFont(new Font("Monospaced", Font.PLAIN, 12));
+    
+    JScrollPane explorerScrollPane = new JScrollPane(tablasList);
+    
+    JButton refreshTablesBtn = new JButton("Actualizar");
+    styleButton(refreshTablesBtn, new Color(33, 150, 243));
+    
+    explorerPanel.add(explorerScrollPane, BorderLayout.CENTER);
+    explorerPanel.add(refreshTablesBtn, BorderLayout.SOUTH);
+
+    // PANEL DERECHO: Editor y resultados
+    JPanel editorResultPanel = new JPanel(new BorderLayout());
+    
+    JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+    splitPane.setDividerLocation(250);
+    splitPane.setResizeWeight(0.4);
+
+    // Panel superior: Editor SQL
+    JPanel editorPanel = new JPanel(new BorderLayout(5, 5));
+    editorPanel.setBorder(new TitledBorder("Consulta SQL"));
+
+    JTextArea sqlTextArea = new JTextArea();
+    sqlTextArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
+    sqlTextArea.setLineWrap(false);
+    sqlTextArea.setTabSize(4);
+    sqlTextArea.setText("-- Escribe tu consulta SQL aquí\n-- Selecciona una base de datos arriba\n\nSELECT * FROM usuarios;");
+    
+    JScrollPane editorScrollPane = new JScrollPane(sqlTextArea);
+    editorPanel.add(editorScrollPane, BorderLayout.CENTER);
+
+    // Panel de botones del editor
+    JPanel editorButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
+    
+    JButton executeBtn = new JButton("Ejecutar");
+    JButton clearBtn = new JButton("Limpiar");
+    JButton createTableBtn = new JButton("Crear Tabla");
+    JButton createViewBtn = new JButton("Crear Vista");
+    JButton showTablesBtn = new JButton("Ver Tablas");
+
+    styleButton(executeBtn, new Color(76, 175, 80));
+    styleButton(clearBtn, new Color(158, 158, 158));
+    styleButton(createTableBtn, new Color(33, 150, 243));
+    styleButton(createViewBtn, new Color(156, 39, 176));
+    styleButton(showTablesBtn, new Color(255, 152, 0));
+
+    editorButtonPanel.add(executeBtn);
+    editorButtonPanel.add(clearBtn);
+    editorButtonPanel.add(new JSeparator(SwingConstants.VERTICAL));
+    editorButtonPanel.add(createTableBtn);
+    editorButtonPanel.add(createViewBtn);
+    editorButtonPanel.add(showTablesBtn);
+
+    editorPanel.add(editorButtonPanel, BorderLayout.SOUTH);
+
+    // Panel inferior: Resultados
+    JPanel resultsPanel = new JPanel(new BorderLayout(5, 5));
+    resultsPanel.setBorder(new TitledBorder("Resultados"));
+
+    DefaultTableModel tableModel = new DefaultTableModel();
+    JTable resultsTable = new JTable(tableModel);
+    resultsTable.setFont(new Font("Arial", Font.PLAIN, 12));
+    resultsTable.setRowHeight(25);
+    resultsTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
+    resultsTable.getTableHeader().setBackground(new Color(193, 219, 232));
+    resultsTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+    
+    JScrollPane resultsScrollPane = new JScrollPane(resultsTable);
+    resultsPanel.add(resultsScrollPane, BorderLayout.CENTER);
+
+    // Panel de información de resultados
+    JPanel resultsInfoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+    JLabel resultsInfoLabel = new JLabel("Selecciona una base de datos y ejecuta una consulta");
+    resultsInfoLabel.setFont(new Font("Arial", Font.ITALIC, 11));
+    resultsInfoPanel.add(resultsInfoLabel);
+    resultsPanel.add(resultsInfoPanel, BorderLayout.SOUTH);
+
+    splitPane.setTopComponent(editorPanel);
+    splitPane.setBottomComponent(resultsPanel);
+    
+    editorResultPanel.add(splitPane, BorderLayout.CENTER);
+
+    mainSplitPane.setLeftComponent(explorerPanel);
+    mainSplitPane.setRightComponent(editorResultPanel);
+
+    panel.add(mainSplitPane, BorderLayout.CENTER);
+
+    // ============= LISTENERS =============
+
+    // Método helper para cargar bases de datos disponibles
+    Runnable cargarBaseDatos = () -> {
+        if (Session.conexionActiva == null) return;
+        
+        databaseComboBox.removeAllItems();
+        Thread loadDBThread = new Thread(() -> {
+            java.util.List<String> databases = util.DBManager.listarBaseDatos(Session.conexionActiva);
+            SwingUtilities.invokeLater(() -> {
+                for (String db : databases) {
+                    databaseComboBox.addItem(db);
+                }
+                
+                // Seleccionar la BD actual si existe
+                if (Session.conexionActiva.getDatabase() != null && 
+                    !Session.conexionActiva.getDatabase().isEmpty()) {
+                    databaseComboBox.setSelectedItem(Session.conexionActiva.getDatabase());
+                }
+                
+                databaseComboBox.setEnabled(true);
+                refreshDBBtn.setEnabled(true);
+            });
+        });
+        loadDBThread.start();
+    };
+
+    // Método helper para cargar tablas
+    Runnable cargarTablas = () -> {
+        if (Session.conexionActiva == null) {
+            JOptionPane.showMessageDialog(panel, 
+                "No hay conexión activa\n\nVe al Gestor de Conexiones y conecta a una base de datos",
+                "Sin conexión",
+                JOptionPane.WARNING_MESSAGE);
+            return;
         }
+
+        tablasListModel.clear();
+        Thread loadThread = new Thread(() -> {
+            java.util.List<String> tablas = util.SqlEditor.listarTablas(Session.conexionActiva);
+            SwingUtilities.invokeLater(() -> {
+                for (String tabla : tablas) {
+                    tablasListModel.addElement(tabla);
+                }
+            });
+        });
+        loadThread.start();
+    };
+
+    // Actualizar info de conexión cuando se muestra el panel
+    panel.addAncestorListener(new javax.swing.event.AncestorListener() {
+        @Override
+        public void ancestorAdded(javax.swing.event.AncestorEvent evt) {
+            if (Session.conexionActiva != null) {
+                connectionInfoLabel.setText("Conectado a: " + Session.conexionActiva.getNombre());
+                connectionInfoLabel.setForeground(new Color(76, 175, 80));
+                cargarBaseDatos.run();
+            } else {
+                connectionInfoLabel.setText("Sin conexión - Ve al gestor de conexiones");
+                connectionInfoLabel.setForeground(Color.RED);
+                tablasListModel.clear();
+                databaseComboBox.setEnabled(false);
+                refreshDBBtn.setEnabled(false);
+            }
+        }
+
+        @Override
+        public void ancestorRemoved(javax.swing.event.AncestorEvent evt) {}
+
+        @Override
+        public void ancestorMoved(javax.swing.event.AncestorEvent evt) {}
     });
 
-    deleteConnectionBtn.addActionListener(e -> {
-        Conexion selected = connectionList.getSelectedValue();
-        if (selected != null) {
-            int confirm = JOptionPane.showConfirmDialog(this, 
-                "¿Eliminar la conexión '" + selected.getNombre() + "'?", 
-                "Confirmar", 
-                JOptionPane.YES_NO_OPTION);
-            if (confirm == JOptionPane.YES_OPTION) {
-                if (dao.eliminarConexion(selected.getId())) {
-                    connectionListModel.removeElement(selected);
-                    JOptionPane.showMessageDialog(this, "Conexión eliminada");
+    databaseComboBox.addActionListener(e -> {
+        if (Session.conexionActiva == null || databaseComboBox.getSelectedItem() == null) return;
+        
+        String selectedDB = (String) databaseComboBox.getSelectedItem();
+        
+        // Actualizar la base de datos en la conexión activa
+        Session.conexionActiva.setDatabase(selectedDB);
+        cargarTablas.run();
+        
+        resultsInfoLabel.setText("Base de datos cambiada a: " + selectedDB);
+    });
+
+    // Refrescar lista de bases de datos
+    refreshDBBtn.addActionListener(e -> cargarBaseDatos.run());
+
+    // Ejecutar consulta
+    executeBtn.addActionListener(e -> {
+        if (Session.conexionActiva == null) {
+            JOptionPane.showMessageDialog(panel, 
+                "No hay conexión activa\n\nConecta a una base de datos primero",
+                "Sin conexion",
+                JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Verificar que haya una base de datos seleccionada
+        if (Session.conexionActiva.getDatabase() == null || 
+            Session.conexionActiva.getDatabase().isEmpty()) {
+            JOptionPane.showMessageDialog(panel, 
+                "Selecciona una base de datos del menú desplegable arriba",
+                "Sin base de datos",
+                JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String sql = sqlTextArea.getText().trim();
+        if (sql.isEmpty() || sql.equals("-- Escribe tu consulta SQL aqui\n-- Selecciona una base de datos arriba\n\nSELECT * FROM usuarios;")) {
+            JOptionPane.showMessageDialog(panel, "Escribe una consulta SQL válida");
+            return;
+        }
+
+        setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+        resultsInfoLabel.setText("Ejecutando...");
+
+        Thread execThread = new Thread(() -> {
+            util.ResultadoSql resultado = 
+                util.SqlEditor.ejecutarConsulta(Session.conexionActiva, sql);
+
+            SwingUtilities.invokeLater(() -> {
+                setCursor(Cursor.getDefaultCursor());
+
+                if (resultado.esExitoso) {
+                    if (resultado.tableModel != null) {
+                        resultsTable.setModel(resultado.tableModel);
+                        resultsInfoLabel.setText(String.format(
+                            "Filas: %d | Tiempo: %.3fs | BD: %s", 
+                            resultado.filas, 
+                            Session.conexionActiva.getDatabase()));
+                    } else {
+                        resultsTable.setModel(new DefaultTableModel());
+                        resultsInfoLabel.setText(resultado.mensaje);
+                            
+                        JOptionPane.showMessageDialog(panel, 
+                            resultado.mensaje, 
+                            "exito!", 
+                            JOptionPane.INFORMATION_MESSAGE);
+                    }
+                    cargarTablas.run(); 
                 } else {
-                    JOptionPane.showMessageDialog(this, "Error al eliminar");
+                    resultsInfoLabel.setText("Error en la consulta");
+                    JOptionPane.showMessageDialog(panel, 
+                        resultado.mensaje, 
+                        "Error SQL", 
+                        JOptionPane.ERROR_MESSAGE);
+                }
+            });
+        });
+        execThread.start();
+    });
+
+    // Limpiar editor
+    clearBtn.addActionListener(e -> {
+        sqlTextArea.setText("");
+        resultsTable.setModel(new DefaultTableModel());
+        resultsInfoLabel.setText("Editor limpio");
+    });
+
+    // Mostrar tablas
+    showTablesBtn.addActionListener(e -> {
+        sqlTextArea.setText("SHOW TABLES;");
+    });
+
+    // Refrescar lista de tablas
+    refreshTablesBtn.addActionListener(e -> cargarTablas.run());
+
+    // Doble clic en tabla para hacer SELECT
+    tablasList.addMouseListener(new java.awt.event.MouseAdapter() {
+        @Override
+        public void mouseClicked(java.awt.event.MouseEvent evt) {
+            if (evt.getClickCount() == 2) {
+                String tabla = tablasList.getSelectedValue();
+                if (tabla != null) {
+                    sqlTextArea.setText("SELECT * FROM " + tabla + " LIMIT 100;");
                 }
             }
-        } else {
-            JOptionPane.showMessageDialog(this, "Selecciona una conexión primero");
         }
     });
 
-    testConnectionBtn.addActionListener(e -> {
-        Conexion selected = connectionList.getSelectedValue();
-        if (selected != null) {
-            if (DBManager.probarConexion(selected)) {
-                JOptionPane.showMessageDialog(this, "✓ Conexión exitosa");
-            } else {
-                JOptionPane.showMessageDialog(this, "✗ Error de conexión", "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        } else {
-            JOptionPane.showMessageDialog(this, "Selecciona una conexión primero");
+    // Crear tabla
+    createTableBtn.addActionListener(e -> {
+        if (Session.conexionActiva == null || Session.conexionActiva.getDatabase() == null || 
+            Session.conexionActiva.getDatabase().isEmpty()) {
+            JOptionPane.showMessageDialog(panel, "Selecciona una base de datos primero");
+            return;
+        }
+
+        String tableName = JOptionPane.showInputDialog(panel, "Nombre de la tabla:");
+        if (tableName != null && !tableName.trim().isEmpty()) {
+            String createTableSQL = "CREATE TABLE " + tableName + " (\n" +
+                "    id INT PRIMARY KEY AUTO_INCREMENT,\n" +
+                "    nombre VARCHAR(100),\n" +
+                "    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n" +
+                ");";
+            sqlTextArea.setText(createTableSQL);
         }
     });
 
-    connectBtn.addActionListener(e -> {
-        Conexion selected = connectionList.getSelectedValue();
-        if (selected != null) {
-            Session.conexionActiva = selected;
-            JOptionPane.showMessageDialog(this, "Conectado a: " + selected.getNombre());
-        } else {
-            JOptionPane.showMessageDialog(this, "Selecciona una conexión primero");
+    // Crear vista
+    createViewBtn.addActionListener(e -> {
+        if (Session.conexionActiva == null || Session.conexionActiva.getDatabase() == null || 
+            Session.conexionActiva.getDatabase().isEmpty()) {
+            JOptionPane.showMessageDialog(panel, "Selecciona una base de datos primero");
+            return;
         }
-    });
 
-
-    connectionList.addListSelectionListener(e -> {
-        if (!e.getValueIsAdjusting() && connectionList.getSelectedValue() != null) {
-            Conexion c = connectionList.getSelectedValue();
-            infoArea.setText("Nombre: " + c.getNombre() + 
-                "\nTipo: " + c.getTipo() +
-                "\nHost: " + c.getHost() + ":" + c.getPuerto() +
-                "\nBase de datos: " + (c.getDatabase().isEmpty() ? "(ninguna)" : c.getDatabase()) +
-                "\nUsuario: " + c.getUsuario());
+        String viewName = JOptionPane.showInputDialog(panel, "Nombre de la vista:");
+        if (viewName != null && !viewName.trim().isEmpty()) {
+            String createViewSQL = "CREATE VIEW " + viewName + " AS\n" +
+                "SELECT columna1, columna2\n" +
+                "FROM tabla\n" +
+                "WHERE condicion;";
+            sqlTextArea.setText(createViewSQL);
         }
     });
 
     return panel;
 }
-
-
-    private JPanel createSqlPanel() {
-        JPanel panel = new JPanel(new BorderLayout(10, 10));
-        panel.setBorder(new EmptyBorder(15, 15, 15, 15));
-
-        // Título
-        JLabel titleLabel = new JLabel("Editor SQL", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 20));
-        panel.add(titleLabel, BorderLayout.NORTH);
-
-        // Panel central dividido en dos: editor y resultados
-        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
-        splitPane.setDividerLocation(250);
-        splitPane.setResizeWeight(0.4);
-
-        // Panel superior: Editor SQL
-        JPanel editorPanel = new JPanel(new BorderLayout(5, 5));
-        editorPanel.setBorder(new TitledBorder("Consulta SQL"));
-
-        JTextArea sqlTextArea = new JTextArea();
-        sqlTextArea.setFont(new Font("Monospaced", Font.PLAIN, 14));
-        sqlTextArea.setLineWrap(true);
-        sqlTextArea.setWrapStyleWord(true);
-        sqlTextArea.setText("-- Escribe tu consulta SQL aquí\nSELECT * FROM tabla;");
-        
-        JScrollPane editorScrollPane = new JScrollPane(sqlTextArea);
-        editorPanel.add(editorScrollPane, BorderLayout.CENTER);
-
-        // Panel de botones del editor
-        JPanel editorButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
-        
-        JButton executeBtn = new JButton("▶ Ejecutar");
-        JButton clearBtn = new JButton("Limpiar");
-        JButton createTableBtn = new JButton("+ Crear Tabla");
-        JButton createViewBtn = new JButton("👁 Crear Vista");
-        JButton formatBtn = new JButton("Formatear");
-
-        // Estilo de botones
-        styleButton(executeBtn, new Color(76, 175, 80));
-        styleButton(clearBtn, new Color(158, 158, 158));
-        styleButton(createTableBtn, new Color(33, 150, 243));
-        styleButton(createViewBtn, new Color(156, 39, 176));
-        styleButton(formatBtn, new Color(255, 152, 0));
-
-        editorButtonPanel.add(executeBtn);
-        editorButtonPanel.add(clearBtn);
-        editorButtonPanel.add(new JSeparator(SwingConstants.VERTICAL));
-        editorButtonPanel.add(createTableBtn);
-        editorButtonPanel.add(createViewBtn);
-        editorButtonPanel.add(formatBtn);
-
-        editorPanel.add(editorButtonPanel, BorderLayout.SOUTH);
-
-        // Panel inferior: Resultados
-        JPanel resultsPanel = new JPanel(new BorderLayout(5, 5));
-        resultsPanel.setBorder(new TitledBorder("Resultados"));
-
-        // Tabla para mostrar resultados
-        String[] columnNames = {"ID", "Nombre", "Email", "Fecha"};
-        Object[][] data = {
-            {1, "Juan Pérez", "juan@email.com", "2026-01-15"},
-            {2, "María García", "maria@email.com", "2026-01-16"},
-            {3, "Carlos López", "carlos@email.com", "2026-01-17"}
-        };
-
-        JTable resultsTable = new JTable(data, columnNames);
-        resultsTable.setFont(new Font("Arial", Font.PLAIN, 12));
-        resultsTable.setRowHeight(25);
-        resultsTable.getTableHeader().setFont(new Font("Arial", Font.BOLD, 12));
-        resultsTable.getTableHeader().setBackground(new Color(193, 219, 232));
-        
-        JScrollPane resultsScrollPane = new JScrollPane(resultsTable);
-        resultsPanel.add(resultsScrollPane, BorderLayout.CENTER);
-
-        // Panel de información de resultados
-        JPanel resultsInfoPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JLabel resultsInfoLabel = new JLabel("Filas: 3 | Tiempo: 0.05s");
-        resultsInfoLabel.setFont(new Font("Arial", Font.ITALIC, 11));
-        resultsInfoPanel.add(resultsInfoLabel);
-        resultsPanel.add(resultsInfoPanel, BorderLayout.SOUTH);
-
-        splitPane.setTopComponent(editorPanel);
-        splitPane.setBottomComponent(resultsPanel);
-
-        panel.add(splitPane, BorderLayout.CENTER);
-        return panel;
-    }
 
     private void styleButton(JButton button, Color bgColor) {
         button.setBackground(bgColor);
@@ -351,6 +617,7 @@ public class DashboardFrame extends JFrame {
         button.setFont(new Font("Arial", Font.BOLD, 12));
         button.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        
+
     }
+
 }

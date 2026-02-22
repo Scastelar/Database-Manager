@@ -60,8 +60,7 @@ public class ConnectionDialog extends JDialog {
         mainPanel.add(new JLabel("Tipo:"), gbc);
 
         gbc.gridx = 1;
-        tipoCombo = new JComboBox<>(new String[]{"MySQL", "MariaDB", "PostgreSQL"});
-        tipoCombo.addActionListener(e -> ajustarPuertoPorDefecto());
+        tipoCombo = new JComboBox<>(new String[]{"MariaDB"});
         mainPanel.add(tipoCombo, gbc);
 
         // Host
@@ -132,21 +131,6 @@ public class ConnectionDialog extends JDialog {
         buttonPanel.add(cancelBtn);
 
         add(buttonPanel, BorderLayout.SOUTH);
-    }
-
-    private void ajustarPuertoPorDefecto() {
-        String tipo = (String) tipoCombo.getSelectedItem();
-        if (tipo != null) {
-            switch (tipo) {
-                case "MySQL":
-                case "MariaDB":
-                    puertoField.setText("3306");
-                    break;
-                case "PostgreSQL":
-                    puertoField.setText("5432");
-                    break;
-            }
-        }
     }
 
     private void cargarDatos(Conexion conexion) {

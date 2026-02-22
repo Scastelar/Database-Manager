@@ -3,6 +3,7 @@ package util;
 import Modelos.Conexion;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Properties;
@@ -11,36 +12,19 @@ public class DBManager {
 
     public static Connection conectar(Conexion conexion) throws SQLException {
         try {
-            switch (conexion.getTipo().toLowerCase()) {
-                case "mariadb":
-                    Class.forName("org.mariadb.jdbc.Driver");
-                    break;
-                case "mysql":
-                    Class.forName("com.mysql.cj.jdbc.Driver");
-                    break;
-                case "postgresql":
-                    Class.forName("org.postgresql.Driver");
-                    break;
-                default:
-                    throw new SQLException("Tipo de base de datos no soportado: " + conexion.getTipo());
-            }
+            Class.forName("org.mariadb.jdbc.Driver");
 
             String jdbcUrl = conexion.getJDBC();
-            System.out.println("Intentando conectar a: " + jdbcUrl);
+            System.out.println("Conectando a MariaDB: " + jdbcUrl);
             System.out.println("Usuario: " + conexion.getUsuario());
 
             Properties props = new Properties();
             props.setProperty("user", conexion.getUsuario());
             props.setProperty("password", conexion.getPassword());
-
-            //deshabilitar plugins de autenticación Windows
-            if (conexion.getTipo().equalsIgnoreCase("mariadb")) {
-                props.setProperty("disabledAuthenticationPlugins", "gssapi,auth_gssapi_client");
-            }
+            props.setProperty("disabledAuthenticationPlugins", "gssapi,auth_gssapi_client");
 
             Connection conn = DriverManager.getConnection(jdbcUrl, props);
-
-            System.out.println("Conexion exitosa!");
+            System.out.println("Conexion exitosa a MariaDB!");
             return conn;
         } catch (ClassNotFoundException e) {
             System.err.println("Driver no encontrado: " + e.getMessage());
@@ -89,17 +73,14 @@ public class DBManager {
     public static java.util.List<String> listarBaseDatos(Conexion conexion) {
         java.util.List<String> databases = new java.util.ArrayList<>();
 
-         try(Connection conn = conectar(conexion);
-                Statement st = conn.createStatement()){
-            String sql;
-            if (conexion.getTipo().equalsIgnoreCase("postgresql")){
-                sql = "select datname from pg_database where datistemplate = false";
-            } else {
-                sql = "show databases";
-            }
-             
-            java.sql.ResultSet rs = st.executeQuery(sql);
-            while(rs.next()){
+          try (Connection conn = conectar(conexion);
+             Statement st = conn.createStatement()) {
+            
+            String sql = "show databases";
+            System.out.println("Listando bases de datos con: " + sql);
+            
+            ResultSet rs = st.executeQuery(sql);
+            while (rs.next()) {
                 databases.add(rs.getString(1));
             }
              
@@ -109,4 +90,25 @@ public class DBManager {
         }
         return databases;
     }   
+    
+    //obtener informacion de la bd usando las system tables
+    public static String obtenerInfoBaseDatos(Conexion conexion, String nombreDB) {
+        StringBuilder info = new StringBuilder();
+        
+        try (Connection conn = conectar(conexion);
+             Statement st = conn.createStatement()) {
+            
+            String sql = "SHOW CREATE DATABASE `" + nombreDB + "`";
+            ResultSet rs = st.executeQuery(sql);
+            
+            if (rs.next()) {
+                info.append(rs.getString(2));
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Error al obtener info de BD: " + e.getMessage());
+        }
+        
+        return info.toString();
+    }
 }
