@@ -8,7 +8,7 @@ import java.awt.*;
 import util.DBManager;
 
 public class CreateDatabaseDialog extends JDialog {
-    
+
     private JTextField nombreDBField;
     private JTextArea infoArea;
     private Conexion conexion;
@@ -17,7 +17,7 @@ public class CreateDatabaseDialog extends JDialog {
     public CreateDatabaseDialog(Frame parent, Conexion conexion) {
         super(parent, "Crear Base de Datos", true);
         this.conexion = conexion;
-        
+
         initComponents();
     }
 
@@ -35,9 +35,9 @@ public class CreateDatabaseDialog extends JDialog {
         infoPanel.setBorder(BorderFactory.createTitledBorder("Conexión Actual"));
         infoArea = new JTextArea(3, 20);
         infoArea.setEditable(false);
-        infoArea.setText("Servidor: " + conexion.getHost() + ":" + conexion.getPuerto() +
-                        "\nTipo: " + conexion.getTipo() +
-                        "\nUsuario: " + conexion.getUsuario());
+        infoArea.setText("Servidor: " + conexion.getHost() + ":" + conexion.getPuerto()
+                + "\nTipo: " + conexion.getTipo()
+                + "\nUsuario: " + conexion.getUsuario());
         infoPanel.add(new JScrollPane(infoArea));
 
         // Campo para nombre de BD
@@ -70,66 +70,65 @@ public class CreateDatabaseDialog extends JDialog {
         add(buttonPanel, BorderLayout.SOUTH);
     }
 
-    private void crearBaseDatos() {
-        String nombreDB = nombreDBField.getText().trim();
-        
-        if (nombreDB.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Ingresa un nombre para la base de datos");
-            return;
-        }
+   private void crearBaseDatos() {
+    String nombreDB = nombreDBField.getText().trim();
+    
+    if (nombreDB.isEmpty()) {
+        JOptionPane.showMessageDialog(this, "Ingresa un nombre para la base de datos");
+        return;
+    }
 
-        // Validar nombre (solo letras, números y guiones bajos)
-        if (!nombreDB.matches("[a-zA-Z0-9_]+")) {
-            JOptionPane.showMessageDialog(this, 
-                "El nombre solo puede contener letras, números y guiones bajos",
-                "Error",
-                JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+    // Validar nombre
+    if (!nombreDB.matches("[a-zA-Z0-9_]+")) {
+        JOptionPane.showMessageDialog(this, 
+            "El nombre solo puede contener letras, números y guiones bajos",
+            "Error",
+            JOptionPane.ERROR_MESSAGE);
+        return;
+    }
 
-        JDialog loadingDialog = new JDialog(this, "Creando...", true);
-        JProgressBar progressBar = new JProgressBar();
-        progressBar.setIndeterminate(true);
-        loadingDialog.add(progressBar);
-        loadingDialog.setSize(200, 80);
-        loadingDialog.setLocationRelativeTo(this);
-
-        SwingWorker<Boolean, Void> worker = new SwingWorker<>() {
-            @Override
-            protected Boolean doInBackground() {
-                return DBManager.crearBaseDatos(conexion, nombreDB);
-            }
-
-            @Override
-            protected void done() {
-                loadingDialog.dispose();
-                try {
-                    boolean exito = get();
-                    if (exito) {
-                        creado = true;
-                        JOptionPane.showMessageDialog(CreateDatabaseDialog.this,
-                            "✓ Base de datos '" + nombreDB + "' creada exitosamente",
-                            "Éxito",
-                            JOptionPane.INFORMATION_MESSAGE);
-                        dispose();
-                    } else {
-                        JOptionPane.showMessageDialog(CreateDatabaseDialog.this,
-                            "✗ No se pudo crear la base de datos",
-                            "Error",
-                            JOptionPane.ERROR_MESSAGE);
-                    }
-                } catch (Exception e) {
+    // ✅ Ejecutar en Thread simple
+    Thread createThread = new Thread(() -> {
+        try {
+            SwingUtilities.invokeLater(() -> 
+                setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR))
+            );
+            
+            boolean exito = DBManager.crearBaseDatos(conexion, nombreDB);
+            
+            SwingUtilities.invokeLater(() -> {
+                setCursor(Cursor.getDefaultCursor());
+                
+                if (exito) {
+                    creado = true;
                     JOptionPane.showMessageDialog(CreateDatabaseDialog.this,
-                        "Error: " + e.getMessage(),
+                        "Base de datos '" + nombreDB + "' creada exitosamente",
+                        "Éxito",
+                        JOptionPane.INFORMATION_MESSAGE);
+                    dispose();
+                } else {
+                    JOptionPane.showMessageDialog(CreateDatabaseDialog.this,
+                        "No se pudo crear la base de datos\n\n" +
+                        "Revisa la consola para más detalles",
                         "Error",
                         JOptionPane.ERROR_MESSAGE);
                 }
-            }
-        };
-
-        worker.execute();
-        loadingDialog.setVisible(true);
-    }
+            });
+            
+        } catch (Exception e) {
+            SwingUtilities.invokeLater(() -> {
+                setCursor(Cursor.getDefaultCursor());
+                JOptionPane.showMessageDialog(CreateDatabaseDialog.this,
+                    "Error: " + e.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            });
+            e.printStackTrace();
+        }
+    });
+    
+    createThread.start();
+}
 
     private void styleButton(JButton button, Color bgColor) {
         button.setBackground(bgColor);
