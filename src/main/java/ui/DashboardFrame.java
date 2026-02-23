@@ -6,6 +6,7 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
+import java.util.Arrays;
 import javax.swing.table.DefaultTableModel;
 import util.DBManager;
 import util.Session;
@@ -14,10 +15,18 @@ public class DashboardFrame extends JFrame {
 
     private JPanel contentPanel;
     private CardLayout cardLayout;
+    
+    // Lista de bases de datos del sistema que no se pueden modificar
+    private static final java.util.List<String> SYSTEM_DATABASES = Arrays.asList(
+        "information_schema",
+        "mysql",
+        "performance_schema",
+        "sys"
+    );
 
     public DashboardFrame(String username) {
 
-        setTitle("Dashboard");
+        setTitle("Dashboard - " +username);
         setSize(900, 600);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
@@ -32,10 +41,8 @@ public class DashboardFrame extends JFrame {
 
         JButton connectionsBtn = createIconButton("src\\main\\java\\icons\\gestion-de-bases-de-datos.png", "Gestor de Conexiones");
         JButton sqlBtn = createIconButton("src\\main\\java\\icons\\servidor-sql.png", "Editor SQL");
-        JButton homeBtn = createIconButton("src\\main\\java\\icons\\hogar.png", "Inicio");
         JButton logoutBtn = createIconButton("src\\main\\java\\icons\\cerrar-sesion.png", "Cerrar sesión");
 
-        sidebar.add(homeBtn);
         sidebar.add(connectionsBtn);
         sidebar.add(sqlBtn);
         sidebar.add(logoutBtn);
@@ -46,20 +53,16 @@ public class DashboardFrame extends JFrame {
         cardLayout = new CardLayout();
         contentPanel = new JPanel(cardLayout);
 
-        JPanel homePanel = createHomePanel(username);
         JPanel connectionsPanel = createConnectionsPanel();
         JPanel sqlPanel = createSqlPanel();
 
-        contentPanel.add(homePanel, "HOME");
         contentPanel.add(connectionsPanel, "CONNECTIONS");
         contentPanel.add(sqlPanel, "SQL");
 
         add(contentPanel, BorderLayout.CENTER);
-        homePanel.setBackground(new Color(255, 241, 181));
         connectionsPanel.setBackground(new Color(255, 241, 181));
         sqlPanel.setBackground(new Color(255, 241, 181));
 
-        homeBtn.addActionListener(e -> cardLayout.show(contentPanel, "HOME"));
         connectionsBtn.addActionListener(e -> cardLayout.show(contentPanel, "CONNECTIONS"));
         sqlBtn.addActionListener(e -> cardLayout.show(contentPanel, "SQL"));
 
@@ -87,16 +90,12 @@ public class DashboardFrame extends JFrame {
         return button;
     }
 
-    // PANELES INTERNOS
-    private JPanel createHomePanel(String username) {
-        JPanel panel = new JPanel(new BorderLayout());
-        JLabel welcome = new JLabel("Bienvenido, " + username, SwingConstants.CENTER);
-        welcome.setFont(new Font("Arial", Font.BOLD, 24));
-
-        panel.add(welcome, BorderLayout.CENTER);
-        return panel;
+    //verificar si es una base de datos del sistema
+    private boolean esBaseDatosSistema(String nombreBD) {
+        return SYSTEM_DATABASES.contains(nombreBD.toLowerCase());
     }
-
+    
+    // PANELES INTERNOS
     private JPanel createConnectionsPanel() {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBorder(new EmptyBorder(20, 20, 20, 20));
@@ -389,9 +388,7 @@ public class DashboardFrame extends JFrame {
 
     panel.add(mainSplitPane, BorderLayout.CENTER);
 
-    // ============= LISTENERS =============
-
-    // Método helper para cargar bases de datos disponibles
+    //cargar bases de datos disponibles
     Runnable cargarBaseDatos = () -> {
         if (Session.conexionActiva == null) return;
         
@@ -416,7 +413,7 @@ public class DashboardFrame extends JFrame {
         loadDBThread.start();
     };
 
-    // Método helper para cargar tablas
+    //cargar tablas
     Runnable cargarTablas = () -> {
         if (Session.conexionActiva == null) {
             JOptionPane.showMessageDialog(panel, 
@@ -503,6 +500,29 @@ public class DashboardFrame extends JFrame {
             return;
         }
 
+        //Restriccion para no modificar tablas del sistema
+        if (esBaseDatosSistema(Session.conexionActiva.getDatabase())) {
+            String sqlLower = sql.toLowerCase().trim();
+            
+            if (sqlLower.startsWith("create") || 
+                sqlLower.startsWith("insert") || 
+                sqlLower.startsWith("update") || 
+                sqlLower.startsWith("delete") || 
+                sqlLower.startsWith("drop") || 
+                sqlLower.startsWith("alter") || 
+                sqlLower.startsWith("truncate")) {
+                
+                JOptionPane.showMessageDialog(panel,
+                    "OPERACIÓN NO PERMITIDA\n\n" +
+                    "No puedes modificar la base de datos del sistema:\n" +
+                    "'" + Session.conexionActiva.getDatabase() + "'\n\n" +
+                    "Solo se permiten consultas de lectura (SELECT, SHOW, DESCRIBE).",
+                    "Error: Base de Datos del Sistema",
+                    JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+        }
+
         setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
         resultsInfoLabel.setText("Ejecutando...");
 
@@ -577,6 +597,17 @@ public class DashboardFrame extends JFrame {
             JOptionPane.showMessageDialog(panel, "Selecciona una base de datos primero");
             return;
         }
+        
+        if (esBaseDatosSistema(Session.conexionActiva.getDatabase())) {
+            JOptionPane.showMessageDialog(panel,
+                "OPERACIÓN NO PERMITIDA\n\n" +
+                "Operacion no permitida en base de datos del sistema:\n" +
+                "'" + Session.conexionActiva.getDatabase() + "'\n\n" +
+                "Selecciona una base de datos de usuario.",
+                "Error: Base de Datos del Sistema",
+                JOptionPane.ERROR_MESSAGE);
+            return;
+        }
 
         String tableName = JOptionPane.showInputDialog(panel, "Nombre de la tabla:");
         if (tableName != null && !tableName.trim().isEmpty()) {
@@ -587,6 +618,8 @@ public class DashboardFrame extends JFrame {
                 ");";
             sqlTextArea.setText(createTableSQL);
         }
+        
+        
     });
 
     // Crear vista
@@ -594,6 +627,17 @@ public class DashboardFrame extends JFrame {
         if (Session.conexionActiva == null || Session.conexionActiva.getDatabase() == null || 
             Session.conexionActiva.getDatabase().isEmpty()) {
             JOptionPane.showMessageDialog(panel, "Selecciona una base de datos primero");
+            return;
+        }
+        
+        if (esBaseDatosSistema(Session.conexionActiva.getDatabase())) {
+            JOptionPane.showMessageDialog(panel,
+                "OPERACIÓN NO PERMITIDA\n\n" +
+                "Operacion no permitida en base de datos del sistema:\n" +
+                "'" + Session.conexionActiva.getDatabase() + "'\n\n" +
+                "Selecciona una base de datos de usuario.",
+                "Error: Base de Datos del Sistema",
+                JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -605,6 +649,8 @@ public class DashboardFrame extends JFrame {
                 "WHERE condicion;";
             sqlTextArea.setText(createViewSQL);
         }
+        
+        
     });
 
     return panel;
