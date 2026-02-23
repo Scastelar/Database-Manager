@@ -143,7 +143,7 @@ public class SqlEditor {
         }
     }
      
-     //listar indices
+     // TABLAS
        public static DefaultTableModel obtenerIndicesTabla(Conexion conexion, String nombreTabla) {
         try (Connection conn = DBManager.conectar(conexion);
              Statement stmt = conn.createStatement()) {
@@ -172,6 +172,289 @@ public class SqlEditor {
             
         } catch (SQLException e) {
             System.err.println("Error al obtener CREATE TABLE: " + e.getMessage());
+        }
+        
+        return "";
+    }
+    
+    // VISTAAS
+    
+    public static List<String> listarVistas(Conexion conexion) {
+        List<String> vistas = new ArrayList<>();
+        
+        try (Connection conn = DBManager.conectar(conexion);
+             Statement stmt = conn.createStatement()) {
+            
+            String sql = "SHOW FULL TABLES WHERE Table_type = 'VIEW'";
+            ResultSet rs = stmt.executeQuery(sql);
+            
+            while (rs.next()) {
+                vistas.add(rs.getString(1));
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Error al listar vistas: " + e.getMessage());
+        }
+        
+        return vistas;
+    }
+    
+    public static String obtenerCreateView(Conexion conexion, String nombreVista) {
+        try (Connection conn = DBManager.conectar(conexion);
+             Statement stmt = conn.createStatement()) {
+            
+            String sql = "SHOW CREATE VIEW `" + nombreVista + "`";
+            ResultSet rs = stmt.executeQuery(sql);
+            
+            if (rs.next()) {
+                return rs.getString(2);
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Error al obtener CREATE VIEW: " + e.getMessage());
+        }
+        
+        return "";
+    }
+    
+    // PROCEDIMIENTOS ALMACENADOS 
+    
+    public static List<String> listarProcedimientos(Conexion conexion) {
+        List<String> procedimientos = new ArrayList<>();
+        
+        try (Connection conn = DBManager.conectar(conexion);
+             Statement stmt = conn.createStatement()) {
+            
+            String sql = "SHOW PROCEDURE STATUS WHERE Db = '" + conexion.getDatabase() + "'";
+            ResultSet rs = stmt.executeQuery(sql);
+            
+            while (rs.next()) {
+                procedimientos.add(rs.getString("Name"));
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Error al listar procedimientos: " + e.getMessage());
+        }
+        
+        return procedimientos;
+    }
+    
+    public static String obtenerCreateProcedure(Conexion conexion, String nombreProc) {
+        try (Connection conn = DBManager.conectar(conexion);
+             Statement stmt = conn.createStatement()) {
+            
+            String sql = "SHOW CREATE PROCEDURE `" + nombreProc + "`";
+            ResultSet rs = stmt.executeQuery(sql);
+            
+            if (rs.next()) {
+                return rs.getString(3); // Columna 3 contiene el CREATE PROCEDURE
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Error al obtener CREATE PROCEDURE: " + e.getMessage());
+        }
+        
+        return "";
+    }
+    
+    // FUNCIONES
+    
+    public static List<String> listarFunciones(Conexion conexion) {
+        List<String> funciones = new ArrayList<>();
+        
+        try (Connection conn = DBManager.conectar(conexion);
+             Statement stmt = conn.createStatement()) {
+            
+            String sql = "SHOW FUNCTION STATUS WHERE Db = '" + conexion.getDatabase() + "'";
+            ResultSet rs = stmt.executeQuery(sql);
+            
+            while (rs.next()) {
+                funciones.add(rs.getString("Name"));
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Error al listar funciones: " + e.getMessage());
+        }
+        
+        return funciones;
+    }
+    
+    public static String obtenerCreateFunction(Conexion conexion, String nombreFunc) {
+        try (Connection conn = DBManager.conectar(conexion);
+             Statement stmt = conn.createStatement()) {
+            
+            String sql = "SHOW CREATE FUNCTION `" + nombreFunc + "`";
+            ResultSet rs = stmt.executeQuery(sql);
+            
+            if (rs.next()) {
+                return rs.getString(3);
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Error al obtener CREATE FUNCTION: " + e.getMessage());
+        }
+        
+        return "";
+    }
+    
+    // TRIGGERS
+    
+    public static List<String> listarTriggers(Conexion conexion) {
+        List<String> triggers = new ArrayList<>();
+        
+        try (Connection conn = DBManager.conectar(conexion);
+             Statement stmt = conn.createStatement()) {
+            
+            String sql = "SHOW TRIGGERS FROM `" + conexion.getDatabase() + "`";
+            ResultSet rs = stmt.executeQuery(sql);
+            
+            while (rs.next()) {
+                triggers.add(rs.getString("Trigger"));
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Error al listar triggers: " + e.getMessage());
+        }
+        
+        return triggers;
+    }
+    
+    public static String obtenerCreateTrigger(Conexion conexion, String nombreTrigger) {
+        try (Connection conn = DBManager.conectar(conexion);
+             Statement stmt = conn.createStatement()) {
+            
+            String sql = "SHOW CREATE TRIGGER `" + nombreTrigger + "`";
+            ResultSet rs = stmt.executeQuery(sql);
+            
+            if (rs.next()) {
+                return rs.getString(3);
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Error al obtener CREATE TRIGGER: " + e.getMessage());
+        }
+        
+        return "";
+    }
+    
+    // SECUENCIAS
+    
+    public static List<String> listarSecuencias(Conexion conexion) {
+        List<String> secuencias = new ArrayList<>();
+        
+        try (Connection conn = DBManager.conectar(conexion);
+             Statement stmt = conn.createStatement()) {
+            
+            String sql = "SELECT TABLE_NAME FROM information_schema.TABLES " +
+                        "WHERE TABLE_SCHEMA = '" + conexion.getDatabase() + "' " +
+                        "AND TABLE_TYPE = 'SEQUENCE'";
+            ResultSet rs = stmt.executeQuery(sql);
+            
+            while (rs.next()) {
+                secuencias.add(rs.getString(1));
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Error al listar secuencias: " + e.getMessage());
+        }
+        
+        return secuencias;
+    }
+    
+    public static String obtenerCreateSequence(Conexion conexion, String nombreSeq) {
+        try (Connection conn = DBManager.conectar(conexion);
+             Statement stmt = conn.createStatement()) {
+            
+            String sql = "SHOW CREATE SEQUENCE `" + nombreSeq + "`";
+            ResultSet rs = stmt.executeQuery(sql);
+            
+            if (rs.next()) {
+                return rs.getString(2);
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Error al obtener CREATE SEQUENCE: " + e.getMessage());
+        }
+        
+        return "";
+    }
+    
+    // INDICES
+    
+    public static List<String> listarIndices(Conexion conexion) {
+        List<String> indices = new ArrayList<>();
+        
+        try (Connection conn = DBManager.conectar(conexion);
+             Statement stmt = conn.createStatement()) {
+            
+            String sql = "SELECT DISTINCT INDEX_NAME FROM information_schema.STATISTICS " +
+                        "WHERE TABLE_SCHEMA = '" + conexion.getDatabase() + "' " +
+                        "AND INDEX_NAME != 'PRIMARY'";
+            ResultSet rs = stmt.executeQuery(sql);
+            
+            while (rs.next()) {
+                indices.add(rs.getString(1));
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Error al listar índices: " + e.getMessage());
+        }
+        
+        return indices;
+    }
+    
+    public static DefaultTableModel obtenerInfoIndice(Conexion conexion, String nombreIndice) {
+        try (Connection conn = DBManager.conectar(conexion);
+             Statement stmt = conn.createStatement()) {
+            
+            String sql = "SELECT * FROM information_schema.STATISTICS " +
+                        "WHERE TABLE_SCHEMA = '" + conexion.getDatabase() + "' " +
+                        "AND INDEX_NAME = '" + nombreIndice + "'";
+            ResultSet rs = stmt.executeQuery(sql);
+            
+            return construirTablaDesdeResultSet(rs);
+            
+        } catch (SQLException e) {
+            System.err.println("Error al obtener info de índice: " + e.getMessage());
+            return new DefaultTableModel();
+        }
+    }
+    
+    // USUARIOS
+    
+    public static List<String> listarUsuarios(Conexion conexion) {
+        List<String> usuarios = new ArrayList<>();
+        
+        try (Connection conn = DBManager.conectar(conexion);
+             Statement stmt = conn.createStatement()) {
+            
+            String sql = "SELECT User, Host FROM mysql.user ORDER BY User";
+            ResultSet rs = stmt.executeQuery(sql);
+            
+            while (rs.next()) {
+                usuarios.add(rs.getString("User") + "@" + rs.getString("Host"));
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Error al listar usuarios: " + e.getMessage());
+        }
+        
+        return usuarios;
+    }
+    
+    public static String obtenerCreateUser(Conexion conexion, String usuario) {
+        try (Connection conn = DBManager.conectar(conexion);
+             Statement stmt = conn.createStatement()) {
+            
+            String sql = "SHOW CREATE USER '" + usuario + "'";
+            ResultSet rs = stmt.executeQuery(sql);
+            
+            if (rs.next()) {
+                return rs.getString(1);
+            }
+            
+        } catch (SQLException e) {
+            System.err.println("Error al obtener CREATE USER: " + e.getMessage());
         }
         
         return "";

@@ -5,10 +5,12 @@ util\SqlEditor.class
 util\ColumnaInfo.class
 util\Session.class
 util\DBConnection.class
+ui\ObjectExplorerDialog$ObjetoBaseDatos.class
 ui\DashboardFrame$1.class
 util\SqlEditor$1.class
 ui\DashboardFrame.class
 ui\LoginFrame.class
+ui\ObjectExplorerDialog.class
 util\ResultadoSql.class
 ui\DashboardFrame$2.class
 util\DBManager.class
@@ -16,3 +18,4 @@ dao\ConexionDAO.class
 ui\RegisterFrame.class
 ui\CreateDatabaseDialog.class
 ui\ConnectionDialog.class
+ui\CreateObjectDialog.class
